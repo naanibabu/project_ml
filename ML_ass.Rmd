@@ -1,0 +1,62 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Yuan Wei"
+date: "November 21, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Required Packages
+```{r package, warning=FALSE, message=FALSE}
+library(caret)
+library(dplyr)
+library(ggplot2)
+```
+
+
+## Reading Raw Data
+```{r file, warning=FALSE, message=FALSE}
+train <- read.csv("pmltraining.csv", header = TRUE, na.strings = c("", "NA"))
+test <- read.csv("pmltesting.csv", header = TRUE, na.strings = c("", "NA"))
+  
+```
+
+## Data cleaning
+Remove all column with less than half of the information, and timestamp.
+```{r clean}
+train.keep <- c((colSums(!is.na(train[,-ncol(train)])) >= 0.6*nrow(train)))
+test.keep <- c((colSums(!is.na(test[,-ncol(test)])) >= 0.6*nrow(test)))
+train.clean <- train[, train.keep]
+test.clean <- test[, test.keep]
+train.clean <- train.clean[, -(1:2)]
+test.clean <- test.clean[, -(1:2)]
+```
+
+
+## Model fitting
+Separate 60% of the training data set as training and the remaining for validation. Once the best model is found, it will be validated on the original testing data set
+```{r train, cache=TRUE}
+inTrain <- createDataPartition(train.clean$classe, p = 0.6, list = FALSE)
+train.set <- train.clean[inTrain, ]
+vad.set <- train.clean[-inTrain, ]
+```
+
+## Model prediction with Random Forest
+Using all variable to create a random forest model.
+```{r validating, warning=FALSE, message=FALSE}
+mod1 <- train(classe ~ ., method = "rf", data = train.set)
+pred.rf <- predict(mod1,vad.set)
+cm <- confusionMatrix(pred.rf, vad.set$classe)
+cm
+```
+
+
+## Final Prediction
+Using random forest model on test data set.
+```{r predict}
+finalPred <- predict(mod1, test.clean)
+finalPred
+```
